@@ -45,7 +45,13 @@ def chunk_text_with_metadata(text: str, page_metadata: list[dict], max_tokens: i
             for page_info in page_metadata:
                 if (chunk_start < page_info["char_end"] and 
                     chunk_end > page_info["char_start"]):
-                    chunk_pages.append(page_info["page_number"])
+                    # Handle different metadata structures from different document types
+                    page_ref = (page_info.get("page_number") or 
+                               page_info.get("paragraph_number") or 
+                               page_info.get("sheet_name") or 
+                               page_info.get("slide_number") or 
+                               "Unknown")
+                    chunk_pages.append(page_ref)
             
             chunks.append({
                 "text": chunk_text,
@@ -77,7 +83,13 @@ def chunk_text_with_metadata(text: str, page_metadata: list[dict], max_tokens: i
         for page_info in page_metadata:
             if (chunk_start < page_info["char_end"] and 
                 chunk_end > page_info["char_start"]):
-                chunk_pages.append(page_info["page_number"])
+                # Handle different metadata structures from different document types
+                page_ref = (page_info.get("page_number") or 
+                           page_info.get("paragraph_number") or 
+                           page_info.get("sheet_name") or 
+                           page_info.get("slide_number") or 
+                           "Unknown")
+                chunk_pages.append(page_ref)
         
         chunks.append({
             "text": chunk_text,

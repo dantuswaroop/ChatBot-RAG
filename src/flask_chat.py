@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 # Configuration
 EMBEDDING_DIR = "../embeddings"
-PDF_DIR = "../data"
+DOC_DIR = "../data"  # Renamed from PDF_DIR since we now support multiple formats
 
 # Global variables to store the loaded index and metadata
 rag_system_loaded = False
@@ -124,26 +124,31 @@ def chat():
 def status():
     """Check system status"""
     embedding_path = os.path.join(os.path.dirname(__file__), EMBEDDING_DIR)
-    pdf_path = os.path.join(os.path.dirname(__file__), PDF_DIR)
+    doc_path = os.path.join(os.path.dirname(__file__), DOC_DIR)
     
     # Check if embeddings exist
     embeddings_exist = os.path.exists(os.path.join(embedding_path, "index.faiss"))
     
-    # List PDF files
-    pdf_files = []
-    if os.path.exists(pdf_path):
-        pdf_files = [f for f in os.listdir(pdf_path) if f.endswith('.pdf')]
+    # List all supported document files
+    supported_extensions = {'.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'}
+    doc_files = []
+    if os.path.exists(doc_path):
+        doc_files = [f for f in os.listdir(doc_path) 
+                    if any(f.lower().endswith(ext) for ext in supported_extensions)]
     
     return jsonify({
         "embeddings_exist": embeddings_exist,
         "rag_system_loaded": rag_system_loaded,
-        "pdf_files": pdf_files,
-        "pdf_count": len(pdf_files)
+        "document_files": doc_files,
+        "document_count": len(doc_files),
+        "supported_formats": list(supported_extensions)
     })
 
 if __name__ == '__main__':
-    print("🤖 Starting WSA Process Assistant (Flask)")
-    print("=" * 50)
+    print("🤖 Starting Document Chat Assistant (Flask)")
+    print("=" * 60)
+    print("📄 Supported formats: PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT")
+    print("=" * 60)
     
     # Check if embeddings exist
     embedding_path = os.path.join(os.path.dirname(__file__), EMBEDDING_DIR)
@@ -155,6 +160,6 @@ if __name__ == '__main__':
     
     print("🌐 Starting web server...")
     print("🔗 Open your browser and go to: http://localhost:5000")
-    print("=" * 50)
+    print("=" * 60)
     
     app.run(debug=True, host='0.0.0.0', port=5000)

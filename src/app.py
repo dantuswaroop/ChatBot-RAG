@@ -1,4 +1,4 @@
-from pdf_loader import extract_text_from_pdfs
+from document_loader import extract_text_from_pdfs, DocumentLoader
 from chunker import chunk_text, chunk_text_with_metadata
 from embedder import build_faiss_index
 from retriever import load_faiss_index, retrieve
@@ -6,23 +6,28 @@ from generator import generate_answer, generate_detailed_answer
 import os
 from pathlib import Path
 
-PDF_DIR = "data"
+DOC_DIR = "data"  # Renamed from PDF_DIR since we now support multiple formats
 EMBEDDING_DIR = "embeddings"
 
 def run_build_pipeline():
-    print("📄 Extracting PDFs with page information...")
-    raw_docs = extract_text_from_pdfs(PDF_DIR)
+    print("📄 Extracting documents (PDF, DOCX, XLSX, PPTX, etc.) with metadata...")
+    raw_docs = extract_text_from_pdfs(DOC_DIR)  # Function now handles all supported formats
 
     if not raw_docs:
-        print("❌ No valid PDFs found or processed!")
-        print("💡 Make sure you have non-empty PDF files in the 'data/' directory.")
+        print("❌ No valid documents found or processed!")
+        print("💡 Make sure you have supported document files in the 'data/' directory.")
+        print("📋 Supported formats: PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT")
         print("📋 Current data directory contents:")
-        data_path = Path(PDF_DIR)
+        data_path = Path(DOC_DIR)
         if data_path.exists():
-            for pdf_file in data_path.glob("*.pdf"):
-                size = os.path.getsize(pdf_file)
-                status = "✅ Valid" if size > 100 else "❌ Empty/Invalid"
-                print(f"   {pdf_file.name}: {size} bytes - {status}")
+            loader = DocumentLoader()
+            supported_exts = list(loader.SUPPORTED_EXTENSIONS.keys())
+            for file_path in data_path.iterdir():
+                if file_path.is_file():
+                    size = os.path.getsize(file_path)
+                    is_supported = file_path.suffix.lower() in supported_exts
+                    status = "✅ Valid" if size > 100 and is_supported else "❌ Empty/Invalid/Unsupported"
+                    print(f"   {file_path.name}: {size} bytes - {status}")
         return
 
     all_chunks = []
@@ -43,7 +48,7 @@ def run_build_pipeline():
             })
 
     if not all_chunks:
-        print("❌ No text chunks created! PDFs may not contain extractable text.")
+        print("❌ No text chunks created! Documents may not contain extractable text.")
         return
 
     os.makedirs(EMBEDDING_DIR, exist_ok=True)
@@ -86,18 +91,19 @@ def interactive_chat():
     Interactive chat mode - continuously waits for user questions
     and provides detailed answers with references until the program is killed (Ctrl+C).
     """
-    print("🤖 Enhanced RAG PDF Chat Assistant")
-    print("=" * 60)
+    print("🤖 Enhanced RAG Document Chat Assistant")
+    print("=" * 70)
     print("Ask detailed questions and get comprehensive answers with:")
     print("• Specific examples from documents")
-    print("• Page number references")
+    print("• Page/section number references")
     print("• Multiple document sources")
+    print("• Support for PDF, DOCX, XLSX, PPTX and more!")
     print("Type your questions and press Enter. Use Ctrl+C to exit.")
-    print("=" * 60)
+    print("=" * 70)
     
     # Check if embeddings exist
     if not os.path.exists(os.path.join(EMBEDDING_DIR, "index.faiss")):
-        print("❌ No embeddings found! Please run with --build first to index your PDFs.")
+        print("❌ No embeddings found! Please run with --build first to index your documents.")
         return
     
     try:
@@ -125,17 +131,15 @@ def interactive_chat():
                 print("Please try again with a different question.")
                 
     except KeyboardInterrupt:
-        print("\n\n👋 Thank you for using Enhanced RAG PDF Chat Assistant. Goodbye!")
+        print("\n\n👋 Thank you for using Enhanced RAG Document Chat Assistant. Goodbye!")
     except EOFError:
         print("\n\n👋 Chat session ended. Goodbye!")
-
-
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Ask questions from your local PDFs using RAG + Ollama.")
-    parser.add_argument("--build", action="store_true", help="Run the indexing pipeline on PDFs.")
-    parser.add_argument("--ask", type=str, help="Ask a single question based on the indexed PDFs.")
+    parser = argparse.ArgumentParser(description="Ask questions from your local documents (PDF, DOCX, XLSX, PPTX, etc.) using RAG + Ollama.")
+    parser.add_argument("--build", action="store_true", help="Run the indexing pipeline on documents.")
+    parser.add_argument("--ask", type=str, help="Ask a single question based on the indexed documents.")
     parser.add_argument("--chat", action="store_true", help="Start interactive chat mode (default if no other option is provided).")
 
     args = parser.parse_args()

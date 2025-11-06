@@ -13,7 +13,7 @@ from generator import generate_detailed_answer
 
 # Configuration
 EMBEDDING_DIR = "../embeddings"
-PDF_DIR = "../data"
+DOC_DIR = "../data"  # Renamed from PDF_DIR since we now support multiple formats
 
 def initialize_session_state():
     """Initialize session state variables"""
@@ -46,7 +46,7 @@ def load_rag_system():
             
             if not os.path.exists(os.path.join(embedding_path, "index.faiss")):
                 loading_placeholder.empty()
-                st.error("❌ No embeddings found! Please run the build pipeline first to index your PDFs.")
+                st.error("❌ No embeddings found! Please run the build pipeline first to index your documents.")
                 st.info("Run: `python src/app.py --build` to create the knowledge base.")
                 return False
             
@@ -328,7 +328,7 @@ def display_message(message, is_user=True):
 def main():
     # Page configuration
     st.set_page_config(
-        page_title="WSA Process Assistant",
+        page_title="Document Chat Assistant",
         page_icon="🤖",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -338,8 +338,8 @@ def main():
     initialize_session_state()
     
     # Header
-    st.title("🤖 WSA Process Assistant")
-    st.markdown("Ask questions about your PDF documents and get detailed answers with source references!")
+    st.title("🤖 Document Chat Assistant")
+    st.markdown("Ask questions about your documents (PDF, DOCX, XLSX, PPTX, etc.) and get detailed answers with source references!")
     
     # Show loading status if not yet loaded
     if not st.session_state.get('loading_complete', False):
@@ -354,7 +354,7 @@ def main():
         
         # Check if embeddings exist
         embedding_path = os.path.join(os.path.dirname(__file__), EMBEDDING_DIR)
-        pdf_path = os.path.join(os.path.dirname(__file__), PDF_DIR)
+        doc_path = os.path.join(os.path.dirname(__file__), DOC_DIR)
         
         if os.path.exists(os.path.join(embedding_path, "index.faiss")):
             if st.session_state.get('loading_complete', False):
@@ -362,13 +362,23 @@ def main():
             else:
                 st.warning("🔄 Loading knowledge base...")
             
-            # Show PDF files
-            if os.path.exists(pdf_path):
-                pdf_files = [f for f in os.listdir(pdf_path) if f.endswith('.pdf')]
-                if pdf_files:
+            # Show all supported document files
+            if os.path.exists(doc_path):
+                supported_extensions = {'.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'}
+                doc_files = [f for f in os.listdir(doc_path) 
+                           if any(f.lower().endswith(ext) for ext in supported_extensions)]
+                if doc_files:
                     st.subheader("📄 Available Documents:")
-                    for pdf_file in pdf_files:
-                        st.text(f"• {pdf_file}")
+                    for doc_file in doc_files:
+                        # Show icon based on file type
+                        ext = '.' + doc_file.lower().split('.')[-1]
+                        icons = {
+                            '.pdf': '📄', '.docx': '📝', '.doc': '📝',
+                            '.xlsx': '📊', '.xls': '📊', 
+                            '.pptx': '📋', '.ppt': '📋'
+                        }
+                        icon = icons.get(ext, '📄')
+                        st.text(f"{icon} {doc_file}")
         else:
             st.error("❌ No knowledge base found")
             st.info("Run the build pipeline first:\n```bash\npython src/app.py --build\n```")
@@ -415,10 +425,11 @@ def main():
         # Instructions
         st.subheader("💡 How to Use")
         st.markdown("""
-        1. Ensure your PDFs are in the `data/` folder
-        2. Run the build pipeline to create embeddings
-        3. Ask questions about your documents
-        4. Get detailed answers with page references
+        1. Place your documents in the `data/` folder
+        2. **Supported formats:** PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT
+        3. Run the build pipeline to create embeddings
+        4. Ask questions about your documents
+        5. Get detailed answers with page/section references
         """)
         
         # Sample questions
